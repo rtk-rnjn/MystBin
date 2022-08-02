@@ -91,8 +91,7 @@ class CLIHandler:
             if not ns.command:
                 return
 
-            cb = getattr(self, f"command_{ns.command}", None)
-            if cb:
+            if cb := getattr(self, f"command_{ns.command}", None):
                 try:
                     await cb(ns)
                 except Interrupt:
@@ -211,15 +210,15 @@ class CLIHandler:
             except:
                 print(f"Users: expected an int, got {namespace.list!r}")
                 return
-            
+
             users: dict = (await self.db.get_admin_userlist(page))['users'] # type: ignore
             if not users:
                 print("Users: No users found")
                 return
-            
+
             for user in users:
                 user['authorizations'] = ", ".join(user['authorizations'])
-            
+
             fmt = tabulate.tabulate([list(x.values()) for x in users], headers=list(users[0].keys()), tablefmt="psql")
             await aioconsole.aprint(fmt)
 

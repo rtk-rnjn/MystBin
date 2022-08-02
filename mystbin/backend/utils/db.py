@@ -192,14 +192,13 @@ class Database:
                 SELECT content, syntax FROM files WHERE parent_id = $1 LIMIT 1
                 """
                 contents = await self._do_query(query, paste_id, conn=conn)
-                ret = {
+                return {
                     "key": paste_id,
                     "data": contents[0]["content"],
                     "has_password": resp[0]["has_password"],
                     "syntax": contents[0]["syntax"],
                 }
 
-                return ret
             else:
                 return None
 
@@ -270,8 +269,7 @@ class Database:
             origin_ip,
         )
 
-        # we need to generate our own response here, as we cant get the full response from the single query
-        resp = {
+        return {
             "id": paste_id,
             "author_id": author,
             "created_at": now,
@@ -285,7 +283,6 @@ class Database:
                 }
             ],
         }
-        return resp
 
     @wrapped_hook_callback
     async def put_pastes(
@@ -328,17 +325,16 @@ class Database:
             resp = await self._do_query(query, paste_id, author, expires, password, origin_ip, conn=conn)
 
             resp = resp[0]
-            to_insert = []
-            for page in pages:
-                to_insert.append(
-                    (
-                        resp["id"],
-                        page.content,
-                        page.filename,
-                        page.syntax,
-                        page.content.count("\n"),
-                    )
+            to_insert = [
+                (
+                    resp["id"],
+                    page.content,
+                    page.filename,
+                    page.syntax,
+                    page.content.count("\n"),
                 )
+                for page in pages
+            ]
 
             files_query = """
                           INSERT INTO files (parent_id, content, filename, syntax, loc)
@@ -438,17 +434,16 @@ class Database:
                 return None
 
             resp = resp[0]
-            qs = []
-            for page in pages:
-                qs.append(
-                    (
-                        page["content"],
-                        page["content"].count("\n"),
-                        len(page["content"]),
-                        paste_id,
-                        page["index"],
-                    )
+            qs = [
+                (
+                    page["content"],
+                    page["content"].count("\n"),
+                    len(page["content"]),
+                    paste_id,
+                    page["index"],
                 )
+                for page in pages
+            ]
 
             query = """
                     UPDATE paste_content
@@ -488,10 +483,7 @@ class Database:
         RETURNING *
         """
         resp = await self._do_query(query, paste_id, password)
-        if resp:
-            return resp[0]
-        
-        return None
+        return resp[0] if resp else None
 
     @wrapped_hook_callback
     async def get_all_user_pastes(self, author_id: Optional[int], limit: Optional[int] = None) -> List[asyncpg.Record]:
@@ -602,10 +594,7 @@ class Database:
             return None
 
         data = data[0]
-        if token and data["token"] != token:
-            return 401
-
-        return data
+        return 401 if token and data["token"] != token else data
 
     @wrapped_hook_callback
     async def new_user(
@@ -649,11 +638,12 @@ class Database:
             userid,
             token,
             emails,
-            discord_id and str(discord_id),
-            github_id and str(github_id),
-            google_id and str(google_id) or None,
-            username
+            discord_id and discord_id,
+            github_id and github_id,
+            google_id and google_id or None,
+            username,
         )
+
         return data[0]
 
     async def update_user(
@@ -902,10 +892,7 @@ class Database:
                 """
 
         data = await self._do_query(query, token)
-        if not data:
-            return False
-
-        return data[0]["id"]
+        return data[0]["id"] if data else False
 
     @wrapped_hook_callback
     async def ensure_admin(self, token: str) -> bool:
@@ -918,10 +905,7 @@ class Database:
                 """
 
         data = await self._do_query(query, token)
-        if not data:
-            return False
-
-        return data[0]["admin"]
+        return data[0]["admin"] if data else False
 
     @wrapped_hook_callback
     async def ensure_author(self, paste_id: str, author_id: int) -> bool:
@@ -935,9 +919,7 @@ class Database:
                 """
 
         response = await self._do_query(query, paste_id, author_id)
-        if response:
-            return True
-        return False
+        return bool(response)
 
     @wrapped_hook_callback
     async def get_admin_userlist(self, page: int) -> Dict[str, Union[List[Dict[str, Union[int, bool, None]]], int]]:
@@ -1009,11 +991,7 @@ class Database:
             v = [x for x in self.ban_cache if x["ip"] == ip or x["userid"] == userid]
             return v[0]["reason"] if v else None
 
-        if ip:
-            v = [x for x in self.ban_cache if x["ip"] == ip]
-            return v[0]["reason"] if v else None
-
-        elif userid:
+        if ip or userid:
             v = [x for x in self.ban_cache if x["ip"] == ip]
             return v[0]["reason"] if v else None
 

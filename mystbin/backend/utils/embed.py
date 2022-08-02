@@ -41,9 +41,7 @@ class Embed:
         self.footer = footer
 
     def to_dict(self) -> Dict[str, Union[str, int, Dict[str, str]]]:
-        final = {}
-        final["type"] = "rich"
-        final["color"] = self.colour
+        final = {"type": "rich", "color": self.colour}
         if self.title:
             final["title"] = self.title
         if self.description:

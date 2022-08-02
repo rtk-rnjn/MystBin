@@ -193,14 +193,13 @@ async def search_bans(request: Request, search: str = None, page: int = 1):
     if not request.state.user or not request.state.user["admin"]:
         return UJSONResponse({"error": "Unauthorized"}, status_code=401)
 
-    if search is not None:
-        data = await request.app.state.db.search_bans(search=search)
-        if isinstance(data, str):
-            return UJSONResponse({"reason": data, "searches": []})
-
-        return UJSONResponse({"reason": None, "searches": data})
-    else:
+    if search is None:
         return UJSONResponse(await request.app.state.db.get_bans(page))
+    data = await request.app.state.db.search_bans(search=search)
+    if isinstance(data, str):
+        return UJSONResponse({"reason": data, "searches": []})
+
+    return UJSONResponse({"reason": None, "searches": data})
 
 
 @router.post(

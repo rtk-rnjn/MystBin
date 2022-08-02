@@ -101,8 +101,7 @@ async def find_discord_tokens(request: Request, pastes: Union[payloads.ListedPas
 
     try:
         for file in pastes.files:
-            v = TOKEN_RE.findall(file.content)
-            if v:
+            if v := TOKEN_RE.findall(file.content):
                 tokens += v
     except AttributeError:
         return TOKEN_RE.findall(pastes.content)

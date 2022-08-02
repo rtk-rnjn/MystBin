@@ -73,10 +73,11 @@ async def regen_token(request: Request) -> Union[UJSONResponse, Dict[str, str]]:
         return UJSONResponse({"error": "Unauthorized"}, status_code=401)
 
     token: Optional[str] = await request.app.state.db.regen_token(userid=request.state.user["id"])
-    if not token:
-        return UJSONResponse({"error": "Unauthorized"}, status_code=401)
-
-    return UJSONResponse({"token": token})
+    return (
+        UJSONResponse({"token": token})
+        if token
+        else UJSONResponse({"error": "Unauthorized"}, status_code=401)
+    )
 
 
 @router.put(
@@ -122,10 +123,15 @@ async def delete_bookmark(request: Request, bookmark: payloads.BookmarkPutDelete
     if not request.state.user:
         return UJSONResponse({"error": "Unauthorized"}, status_code=401)
 
-    if not await request.app.state.db.delete_bookmark(request.state.user["id"], bookmark.paste_id):
-        return UJSONResponse({"error": "Bookmark does not exist"}, status_code=400)
-    else:
-        return Response(status_code=204)
+    return (
+        Response(status_code=204)
+        if await request.app.state.db.delete_bookmark(
+            request.state.user["id"], bookmark.paste_id
+        )
+        else UJSONResponse(
+            {"error": "Bookmark does not exist"}, status_code=400
+        )
+    )
 
 
 @router.get(

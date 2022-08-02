@@ -37,7 +37,7 @@ if __name__ == "__main__":
         # allow from all hosts when in a docker container, so that requests can be proxied in
     else:
         config = uvicorn.Config("app:app", port=port, host="127.0.0.1")
-    
+
     server = uvicorn.Server(config)
 
     if use_workers:
@@ -47,5 +47,5 @@ if __name__ == "__main__":
         runner = Multiprocess(config, target=server.run, sockets=[sock])
     else:
         runner = server
-    
+
     runner.run()

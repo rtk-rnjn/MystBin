@@ -195,17 +195,16 @@ async def auth_from_github(request: Request) -> Union[Response, UJSONResponse]:
         username = data["name"]
 
     async with request.app.state.client.get(
-        "https://api.github.com/user/emails",
-        headers={"Authorization": f"Bearer {token}"},
-    ) as resp:
+            "https://api.github.com/user/emails",
+            headers={"Authorization": f"Bearer {token}"},
+        ) as resp:
         resp.raise_for_status()
         data = await resp.json()
-        email = []
-        for entry in data:
-            if "users.noreply.github.com" in entry["email"]:
-                continue
-
-            email.append(entry["email"])
+        email = [
+            entry["email"]
+            for entry in data
+            if "users.noreply.github.com" not in entry["email"]
+        ]
 
     if request.state.user is not None:
         token = await request.app.state.db.update_user(request.state.user["id"], github_id=userid, emails=email)
@@ -229,10 +228,13 @@ async def disconnect_app(request: Request, app: str):
     if not request.state.user:
         return UJSONResponse({"error": "Unauthorized"}, status_code=401)
 
-    if not await request.app.state.db.unlink_account(request.state.user["id"], app):
-        return UJSONResponse({"error": "Account not linked"}, status_code=400)
-
-    return Response(status_code=204)
+    return (
+        Response(status_code=204)
+        if await request.app.state.db.unlink_account(
+            request.state.user["id"], app
+        )
+        else UJSONResponse({"error": "Account not linked"}, status_code=400)
+    )
 
 
 @router.post("/callbacks/sentry", include_in_schema=False)
